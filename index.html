@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Xtream Player for MSX</title>
+    <script src="msx.js"></script>
+    <style>
+        body { margin: 0; background: #111; color: #fff; font-family: sans-serif; padding: 20px; }
+        .container { display: flex; flex-direction: column; gap: 20px; }
+        .channels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .channel-card { background: #222; padding: 15px; text-align: center; border-radius: 8px; cursor: pointer; }
+        .channel-card:focus { background: #ff3333; outline: none; } /* Фокус для пульта */
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Мой Xtream Плеер</h2>
+    <div id="channels-list" class="channels">
+        </div>
+</div>
+
+<script>
+    // Настройки вашего Xtream Codes (в продакшене лучше сделать форму ввода)
+    const SERVER = "http://your-iptv-dns.com:8080";
+    const USER = "your_username";
+    const PASS = "your_password";
+
+    // Функция загрузки каналов
+    async function loadChannels() {
+        const url = `${SERVER}/player_api.php?username=${USER}&password=${PASS}&action=get_live_streams`;
+        try {
+            const response = await fetch(url);
+            const channels = await response.json();
+            const listContainer = document.getElementById('channels-list');
+
+            // Выводим первые 20 каналов для теста
+            channels.slice(0, 20).forEach(ch => {
+                const card = document.createElement('div');
+                card.className = 'channel-card';
+                card.tabIndex = 0; // Делаем элемент фокусируемым для пульта
+                card.innerText = ch.name;
+
+                // Ссылка на сам видео-поток (обычно .ts или .m3u8)
+                const streamUrl = `${SERVER}/live/${USER}/${PASS}/${ch.stream_id}.ts`;
+
+                // Клик или нажатие ОК на пульте
+                card.addEventListener('click', () => playVideo(streamUrl, ch.name));
+                card.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') playVideo(streamUrl, ch.name);
+                });
+
+                listContainer.appendChild(card);
+            });
+        } catch (err) {
+            console.error("Ошибка загрузки данных:", err);
+        }
+    }
+
+    // Функция запуска видео через Media Station X API
+    function playVideo(url, title) {
+        if (typeof MSXPlatform !== 'undefined') {
+            MSXPlatform.executeAction({
+                action: "video:" + url,
+                title: title
+            });
+        } else {
+            alert("Запуск видео (работает только внутри MSX): " + url);
+        }
+    }
+
+    // Инициализация при старте
+    window.onload = loadChannels;
+</script>
+</body>
+</html>
